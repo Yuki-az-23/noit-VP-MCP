@@ -32,6 +32,44 @@ The dev host needs `noit-mcp-server` on `PATH` (or override `noit.mcpServerComma
 - @docs/architecture/diagrams/07-auth-service.md
 ```
 
+## Configuration
+
+Two settings under `noit.*` in VS Code settings:
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `noit.mcpServerCommand` | `noit-mcp-server` | Command to spawn the NOit MCP server over stdio. Override if the binary lives somewhere not on `PATH`, or to point at a venv. |
+| `noit.activeSetPath` | `.claude/diagrams-active.md` | Path (relative to the workspace root) of the sidecar file. Change if you want the active set stored somewhere else (e.g. `.vscode/diagrams-active.md` for editor-scoped state). |
+
+## Architecture
+
+```
+src/
+├── extension.ts            # activate(): spawn MCP client, register tree + commands
+├── mcpClient.ts            # thin wrapper around @modelcontextprotocol/sdk Client (stdio)
+├── activeSet.ts            # readActivePaths() / writeActivePaths() — sidecar I/O
+├── diagramTreeProvider.ts  # TreeDataProvider; nodes = groups + pieces
+│                           # ← togglePiece() lives here (currently a TODO)
+└── injectCommand.ts        # reads sidecar, pastes @-refs at cursor
+```
+
+**Data flow on a toggle:**
+1. User clicks a checkbox in the tree.
+2. `view.onDidChangeCheckboxState` fires in `extension.ts`.
+3. It calls `tree.togglePiece(node, checked)`.
+4. `togglePiece` reads the sidecar, mutates the list, writes it back.
+5. `tree.refresh()` re-fires the tree, and `getTreeItem()` re-reads the sidecar to repaint checkboxes.
+
+**Why the sidecar is the source of truth, not the tree:** the tree is a *view* of the file. The agent, the extension, and humans editing the file by hand all see the same data. If the extension is broken or missing, the agent can still read the sidecar via `@`-reference.
+
 ## Status
 
 This is a scaffold. The toggle handler in `src/diagramTreeProvider.ts` is intentionally a `TODO` — see the docstring there for the design decisions to make.
+
+## Contributing
+
+The "missing piece" for a first working version is `togglePiece` in `src/diagramTreeProvider.ts`. The skeleton is in the TODO comment. After that, polish targets in roughly this order:
+
+1. Error states — what if `noit-mcp-server` isn't installed? (Currently: tree is empty, no message.)
+2. Tree grouping — currently hardcoded to `infra` / `ops` / `seq`. Should read from `rollup.manifest.yml` if present.
+3. Filter / search in the tree view.

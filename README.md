@@ -47,6 +47,7 @@
 | 📱 **Responsive** | Works on mobile, tablets, desktop |
 | 🏷️ **Grouped Nav** | Filter by Infra / Ops / Sequences (configurable) |
 | 🤖 **MCP Server** | AI agents can create/update diagrams via tools |
+| 💻 **VS Code Extension** | Sidebar tree to browse and toggle active pieces for the current chat |
 | 📦 **Zero Config** | Drop into any MkDocs Material project |
 | 🎨 **Every Mermaid Interactive** | All `mermaid` fences get pan/zoom automatically |
 
@@ -95,6 +96,12 @@ noit-mcp-server --transport http --port 8765
 | `build_viewer` | Generate the interactive HTML viewer |
 | `get_diagram_piece` | Read a piece's content |
 
+## VS Code Extension
+
+A companion extension lives in [`vscode-extension/`](./vscode-extension/) and gives the editor a sidebar tree of all your STAR pieces, grouped by `infra` / `ops` / `seq`. Each piece has a checkbox; toggling it writes the path to `.claude/diagrams-active.md`, a hand-editable Markdown sidecar. A single command — **NOit: Inject Active Diagrams into Chat** — pastes `@path` lines for the active set into the prompt, so the agent sees exactly the pieces you marked.
+
+The sidecar is the source of truth, not the tree: the agent can `@`-reference `.claude/diagrams-active.md` directly even if the extension isn't running. See [`vscode-extension/README.md`](./vscode-extension/README.md) for setup, configuration, and the file layout.
+
 ## Project Structure (after `init`)
 
 ```
@@ -116,7 +123,9 @@ your-project/
 │       └── mermaid-interactive.css       # Dark theme for interactive diagrams
 ├── scripts/
 │   └── build_diagram_rollup.py           # Generator (also via CLI)
+├── vscode-extension/                     # Optional: sidebar tree for active pieces
 └── .claude/
+    ├── diagrams-active.md                # Active set (managed by extension, hand-editable)
     └── skills/
         └── documenting-data-flow/
             └── SKILL.md                  # Skill definition for agents
@@ -262,4 +271,4 @@ MIT — © 2024 [NOit](https://noit2.com)
 ---
 
 **Built by NOit** — Making architecture documentation effortless since 2024.  
-🌐 [noit2.com](https://noit2.com) | 📧 hello@noit2.com
+🌐 [noit2.com](https://noit2.com) | 📧 az@zagent.live
