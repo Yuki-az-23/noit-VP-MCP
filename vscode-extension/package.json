@@ -1,0 +1,75 @@
+{
+  "name": "noit-diagrams",
+  "displayName": "NOit Diagrams",
+  "description": "Browse and toggle active STAR architecture diagrams for the current chat.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "noit",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "noit-diagrams",
+          "title": "NOit Diagrams",
+          "icon": "$(list-unordered)"
+        }
+      ]
+    },
+    "views": {
+      "noit-diagrams": [
+        {
+          "id": "noit.diagramList",
+          "name": "Active Pieces",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "noit.injectActive",
+        "title": "NOit: Inject Active Diagrams into Chat",
+        "category": "NOit"
+      },
+      {
+        "command": "noit.refreshTree",
+        "title": "NOit: Refresh Diagram List",
+        "category": "NOit"
+      }
+    ],
+    "configuration": {
+      "title": "NOit Diagrams",
+      "properties": {
+        "noit.mcpServerCommand": {
+          "type": "string",
+          "default": "noit-mcp-server",
+          "description": "Command to spawn the NOit MCP server (stdio transport)."
+        },
+        "noit.activeSetPath": {
+          "type": "string",
+          "default": ".claude/diagrams-active.md",
+          "description": "Path (relative to workspace root) to the active-diagrams sidecar file."
+        }
+      }
+    }
+  }
+}
