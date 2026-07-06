@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .python-version
 venv/
+.venv/
 .env
 .pytest_cache/
 .coverage
@@ -28,6 +29,9 @@ docs/architecture_diagrams.html
 docs/architecture_diagrams.generated.html
 docs/architecture/OVERVIEW.md
 docs/architecture/diagrams/OVERVIEW.generated.md
+
+# Local planning docs (superpowers plans)
+docs/superpowers/
 
 # MCP
 *.log
