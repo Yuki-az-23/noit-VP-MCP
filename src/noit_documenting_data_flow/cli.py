@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import shutil
 import sys
@@ -20,6 +21,7 @@ from pathlib import Path
 import yaml
 
 from .generator import build_viewer, parse_piece, derive_id
+from .audit import audit_diagrams
 from .templates import (
     DIAGRAM_TEMPLATE,
     MANIFEST_TEMPLATE,
@@ -188,6 +190,44 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_audit(args: argparse.Namespace) -> int:
+    """Audit pieces for drift against the source code they document."""
+    cwd = Path.cwd()
+    diagrams_dir = cwd / args.diagrams_dir
+    manifest_path = Path(args.manifest) if args.manifest else diagrams_dir / "rollup.manifest.yml"
+
+    if not manifest_path.exists():
+        print(f"[ERROR] Manifest not found: {manifest_path}")
+        print("   Run 'noit-diagram-rollup init' first, or specify --manifest")
+        return 1
+
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    report = audit_diagrams(manifest, diagrams_dir, cwd)
+
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        if report.score >= 80:
+            band = "IN SYNC"
+        elif report.score >= 50:
+            band = "DRIFTING"
+        else:
+            band = "OUT OF SYNC"
+        print(f"Docs Sync Score: {report.score}/100  [{band}]")
+        print(f"Pieces audited: {report.total_pieces}")
+        if report.findings:
+            print("\n[FINDINGS]")
+            for f in report.findings:
+                print(f"  [{f.kind.upper()}] {f.piece}: {f.detail}")
+        else:
+            print("\n[OK] No drift detected - diagrams match the code.")
+
+    if args.fail_under and report.score < args.fail_under:
+        print(f"\n[FAIL] Score {report.score} below --fail-under {args.fail_under}")
+        return 1
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="noit-diagram-rollup",
@@ -218,6 +258,15 @@ def main() -> int:
     p_val.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
     p_val.add_argument("--manifest", help="Manifest file")
     p_val.set_defaults(func=cmd_validate)
+
+    # audit
+    p_audit = sub.add_parser("audit", help="Audit pieces for drift vs source code (Docs Sync Score)")
+    p_audit.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
+    p_audit.add_argument("--manifest", help="Manifest file")
+    p_audit.add_argument("--json", action="store_true", help="Emit machine-readable JSON report")
+    p_audit.add_argument("--fail-under", type=int, default=0,
+                         help="Exit 1 if score is below this value (CI gate; 0 = report-only)")
+    p_audit.set_defaults(func=cmd_audit)
 
     args = parser.parse_args()
     return args.func(args)
