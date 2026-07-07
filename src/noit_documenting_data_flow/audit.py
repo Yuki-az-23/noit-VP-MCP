@@ -70,3 +70,65 @@ def compute_score(total_pieces: int, findings: list[Finding]) -> int:
         return 10
     score = 100 - sum(DEDUCTIONS.get(f.kind, 5) for f in findings)
     return max(10, min(100, score))
+
+
+def last_change_ts(path: Path, repo_root: Path) -> float | None:
+    """Last-commit timestamp from git; mtime fallback outside a repo or for untracked files."""
+    try:
+        rel = path.relative_to(repo_root)
+        out = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "--", str(rel)],
+            cwd=repo_root, capture_output=True, text=True, check=False,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return float(out.stdout.strip())
+    except (OSError, ValueError):
+        pass
+    return path.stat().st_mtime if path.exists() else None
+
+
+def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path) -> AuditReport:
+    """Compare every registered piece against the source file its hub points at."""
+    findings: list[Finding] = []
+    entries = manifest.get("diagrams", [])
+    registered = {e["file"] for e in entries}
+
+    for entry in entries:
+        piece_path = diagrams_dir / entry["file"]
+        if not piece_path.exists():
+            findings.append(
+                Finding("missing_file", entry["file"], "listed in manifest but not on disk")
+            )
+            continue
+        try:
+            piece = parse_piece(piece_path)
+        except ValueError as e:
+            findings.append(Finding("no_source_ref", entry["file"], str(e)))
+            continue
+        src = extract_source_path(piece["mermaid"])
+        if src is None:
+            findings.append(
+                Finding("no_source_ref", entry["file"], "hub label has no <br/>source/path line")
+            )
+            continue
+        src_path = repo_root / src
+        if not src_path.exists():
+            findings.append(
+                Finding("missing_source", entry["file"], f"documented source not found: {src}")
+            )
+            continue
+        src_ts = last_change_ts(src_path, repo_root)
+        piece_ts = last_change_ts(piece_path, repo_root)
+        if src_ts is not None and piece_ts is not None and src_ts > piece_ts:
+            findings.append(
+                Finding("stale", entry["file"], f"{src} changed after this piece was last updated")
+            )
+
+    for path in sorted(diagrams_dir.glob("[0-9][0-9]-*.md")):
+        if path.name != "00-template.md" and path.name not in registered:
+            findings.append(
+                Finding("unregistered", path.name, "piece on disk but not in rollup.manifest.yml")
+            )
+
+    total = len(entries)
+    return AuditReport(findings=findings, total_pieces=total, score=compute_score(total, findings))
