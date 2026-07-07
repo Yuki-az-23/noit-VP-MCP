@@ -95,6 +95,49 @@ noit-mcp-server --transport http --port 8765
 | `list_diagram_pieces` | List all pieces with metadata |
 | `build_viewer` | Generate the interactive HTML viewer |
 | `get_diagram_piece` | Read a piece's content |
+| `audit_diagrams` | Drift check vs source code — findings + Docs Sync Score (JSON) |
+
+## Keep Docs in Sync — Audit & Docs Sync Score
+
+Inspired by [loop engineering](https://github.com/cobusgreyling/loop-engineering): docs stay
+alive only if a loop keeps checking them. `audit` measures drift between your diagram pieces
+and the code they document, and reports a **Docs Sync Score** (10–100):
+
+```bash
+noit-diagram-rollup audit
+
+Docs Sync Score: 85/100  [IN SYNC]
+Pieces audited: 6
+
+[FINDINGS]
+  [STALE] 03-generator.md: src/generator.py changed after this piece was last updated
+```
+
+| Check | Finding | Meaning |
+|-------|---------|---------|
+| Source exists | `missing_source` | Hub references a file that is gone |
+| Freshness | `stale` | Source committed after the piece was last touched |
+| Registration | `unregistered` | Piece on disk but missing from the manifest |
+| Manifest integrity | `missing_file` | Manifest lists a piece that doesn't exist |
+| Hub format | `no_source_ref` | Hub label has no `<br/>src/path.py` line |
+
+**Score bands:** 80+ in sync · 50–79 drifting · <50 out of sync.
+Freshness uses git commit times (mtime fallback outside a repo). The hub label's second line
+(`hub["⚙️ name<br/>src/path.py"]`) is what ties a piece to its source — keep it accurate.
+
+### Rollout, loop-engineering style
+
+1. **L1 — report:** run `noit-diagram-rollup audit` locally; `--json` for scripts.
+2. **L2 — gate:** enforce in CI once the score stabilizes:
+
+   ```yaml
+   # .github/workflows/docs-sync.yml (step)
+   - run: pip install noit-documenting-data-flow
+   - run: noit-diagram-rollup audit --fail-under 80
+   ```
+
+3. **L3 — agent loop:** agents call the `audit_diagrams` MCP tool post-merge, update stale
+   pieces, and rebuild the viewer — the docs never rot.
 
 ## VS Code Extension
 
@@ -206,6 +249,7 @@ Commands:
   init              Initialize diagram structure in current project
   build             Build viewer + overview (dry-run by default)
   validate          Validate all pieces have valid mermaid + required fields
+  audit             Audit pieces for drift vs source code (Docs Sync Score)
 
 Options:
   --diagrams-dir PATH     Diagrams folder (default: docs/architecture/diagrams)

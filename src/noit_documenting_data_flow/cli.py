@@ -338,6 +338,19 @@ noit-diagram-rollup build --write --out-html docs/architecture_diagrams.html
 The generator derives every HTML id from the filename, builds the nav + `diagramIds` for you,
 HTML-escapes the Mermaid (so `<br/>` survives), and preserves the pan/zoom shell.
 
+## The documentation loop
+
+After changing any function that has a STAR piece (or adding a new public function):
+
+1. Run `noit-diagram-rollup audit` (or the `audit_diagrams` MCP tool).
+2. For every `stale` finding: re-read the source, update the piece's mermaid, re-run audit.
+3. For every `missing_source` finding: the code moved or was deleted — fix the hub path or
+   remove the piece (and its `.pages` / manifest lines).
+4. For every `unregistered` finding: add the piece to `.pages` and `rollup.manifest.yml`.
+5. Re-roll the viewer: `noit-diagram-rollup build --write`.
+
+Do not declare a documentation task done while the Docs Sync Score is below 80.
+
 ## Common mistakes
 
 - ❌ Hand-editing `architecture_diagrams.html` — the generator owns all of it. Edit the piece, re-run.
