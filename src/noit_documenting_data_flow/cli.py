@@ -234,7 +234,7 @@ def main() -> int:
         description="NOit Documenting Data Flow - STAR diagrams -> interactive viewer",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.1.0")
 
     sub = parser.add_subparsers(dest="command", required=True)
 

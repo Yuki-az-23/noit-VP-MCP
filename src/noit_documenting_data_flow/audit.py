@@ -90,7 +90,8 @@ def last_change_ts(path: Path, repo_root: Path) -> float | None:
 def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path) -> AuditReport:
     """Compare every registered piece against the source file its hub points at."""
     findings: list[Finding] = []
-    entries = manifest.get("diagrams", [])
+    # 00-template.md is the scaffold users copy — never audited, never counted.
+    entries = [e for e in manifest.get("diagrams", []) if e.get("file") != "00-template.md"]
     registered = {e["file"] for e in entries}
 
     for entry in entries:

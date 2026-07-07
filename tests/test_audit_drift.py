@@ -104,3 +104,22 @@ def test_audit_flags_piece_without_source_ref(tmp_path):
     manifest = make_manifest(diagrams, ["01-vague.md"])
     report = audit_diagrams(manifest, diagrams, tmp_path)
     assert [f.kind for f in report.findings] == ["no_source_ref"]
+
+
+def test_audit_ignores_template_even_when_registered(tmp_path):
+    """00-template.md is never audited or flagged, even if init left it in the manifest."""
+    diagrams = tmp_path / "docs" / "architecture" / "diagrams"
+    diagrams.mkdir(parents=True)
+    _make_src(tmp_path)
+    # Template has a placeholder hub path (src/path/to/module.py) that would flag
+    # missing_source if audited — it must be skipped entirely.
+    (diagrams / "00-template.md").write_text(
+        '# Template\n\n```mermaid\ngraph LR\n    hub["⚙️ FUNCTION_NAME<br/>src/path/to/module.py"]:::hub\n```\n',
+        encoding="utf-8",
+    )
+    make_piece(diagrams, "01-handler.md", "src/handler.py")
+    manifest = make_manifest(diagrams, ["00-template.md", "01-handler.md"])
+    report = audit_diagrams(manifest, diagrams, tmp_path)
+    assert report.findings == []
+    assert report.total_pieces == 1  # template not counted
+    assert report.score == 100
