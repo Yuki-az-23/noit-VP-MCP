@@ -22,6 +22,7 @@ from mcp.types import (
 )
 
 from .generator import build_viewer, parse_piece, derive_id
+from .audit import audit_diagrams
 from .templates import (
     DIAGRAM_TEMPLATE,
     MANIFEST_TEMPLATE,
@@ -123,6 +124,16 @@ async def list_tools() -> list[Tool]:
                 },
             },
         ),
+        Tool(
+            name="audit_diagrams",
+            description=(
+                "Audit diagram pieces for drift against source code. Returns JSON with a "
+                "Docs Sync Score (10-100) and findings: missing_source (documented file is "
+                "gone), stale (source changed after the piece), unregistered, missing_file, "
+                "no_source_ref. Run after code changes; fix stale pieces, then build_viewer."
+            ),
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 
@@ -145,6 +156,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
 
     if name == "build_viewer":
         return await _build_viewer(diagrams_dir, arguments.get("write", False))
+
+    if name == "audit_diagrams":
+        return await _audit(diagrams_dir)
 
     return CallToolResult(content=[TextContent(type="text", text=f"Unknown tool: {name}")], isError=True)
 
@@ -286,6 +300,14 @@ async def _get_piece(diagrams_dir: Path, filename: str) -> CallToolResult:
 
     content = path.read_text(encoding="utf-8")
     return CallToolResult(content=[TextContent(type="text", text=content)])
+
+
+async def _audit(diagrams_dir: Path) -> CallToolResult:
+    manifest = _load_manifest(diagrams_dir)
+    report = audit_diagrams(manifest, diagrams_dir, Path.cwd())
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(report.to_dict(), indent=2))]
+    )
 
 
 async def _build_viewer(diagrams_dir: Path, write: bool) -> CallToolResult:
