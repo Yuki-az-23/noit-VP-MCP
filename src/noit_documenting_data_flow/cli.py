@@ -236,13 +236,13 @@ description: Use when documenting a function or operation's data flow, adding or
 Architecture is documented as **per-function diagram pieces** under `docs/architecture/diagrams/`.
 Each piece is the **source of truth** for one function's data flow. The interactive viewer
 (`docs/architecture_diagrams.html`) and the overview index are **generated** from the pieces by
-`scripts/build_diagram_rollup.py` — you never hand-edit them.
+`noit-diagram-rollup build` — you never hand-edit them.
 
 **Inverted source-of-truth:** author the `.md` piece -> run the generator -> the "VP rollup" (HTML
 viewport + overview) rebuilds. Do NOT copy Mermaid into the HTML by hand or maintain it twice.
 
 **House convention (every plan + doc, not just architecture):** author diagrams in the STAR
-hub-and-spoke layout ([star-template.md](star-template.md)) with the dark palette
+hub-and-spoke layout ([00-template.md](00-template.md)) with the dark palette
 ([mermaid-style.md](mermaid-style.md)). Every ```` ```mermaid ```` block on the MkDocs site renders
 **interactive automatically** — dark pan/zoom/fullscreen viewport, same look as
 `architecture_diagrams.html` — via `docs/javascripts/mermaid-interactive.js` +
@@ -262,8 +262,8 @@ anywhere; the viewer treatment is free. No per-page setup.
 ## Authoring a piece (4 steps)
 
 1. **One function = one hub.** Use the STAR hub-and-spoke layout in
-   [star-template.md](star-template.md): the function is the center; inputs / dependencies / outputs
-   radiate out. Copy the blank skeleton; a filled real-op example is in the same file.
+   [00-template.md](00-template.md): the function is the center; inputs / dependencies / outputs
+   radiate out. Copy it to `NN-your-function.md` and replace the placeholders.
 2. **Style it** per [mermaid-style.md](mermaid-style.md): dark `classDef` palette with explicit
    `color:`, `<br/>` (never `\\n`) for line breaks, the shared edge vocabulary (`-->` `==>` `-.->`).
 3. **Register nav:** add the file to `.pages` (order) and to `rollup.manifest.yml` (group + badge).
@@ -272,12 +272,12 @@ anywhere; the viewer treatment is free. No per-page setup.
 
 ## Roll up the VP (viewport + overview)
 
-Three deliberate tiers — the `--write` default is a **safe `.generated.` sibling**, so replacing the
+Three deliberate tiers (the MCP `build_viewer` tool follows tiers 1 and 2) — the `--write` default is a **safe `.generated.` sibling**, so replacing the
 live viewer is always an explicit choice:
 
 ```bash
 # 1. dry-run (default): writes to a scratch temp dir + prints a diff hint. Nothing in the repo moves.
-noit-diagram-rollup build --dry-run
+noit-diagram-rollup build
 
 # 2. write the *.generated.* siblings
 noit-diagram-rollup build --write
