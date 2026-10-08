@@ -26,7 +26,10 @@ export class DiagramTreeProvider implements vscode.TreeDataProvider<DiagramNode>
   ) {}
 
   async refresh(): Promise<void> {
-    this.pieces = await this.mcp.listPieces().catch(() => []);
+    this.pieces = await this.mcp.listPieces().catch((err) => {
+      vscode.window.showErrorMessage(`NOit: could not list diagrams — ${err?.message ?? err}`);
+      return [];
+    });
     this.activePaths = new Set(await readActivePaths(this.activeSetAbsolutePath));
     this._onDidChange.fire();
   }
@@ -64,36 +67,21 @@ export class DiagramTreeProvider implements vscode.TreeDataProvider<DiagramNode>
   }
 
   /**
-   * Called by VS Code when the user toggles a piece's checkbox.
-   *
-   * Your job: read the current sidecar, add or remove `node.piece.file_path`
-   * (preserving order — see guidance below), and write it back. Then call
-   * this.refresh() so the UI re-resolves checkbox state.
-   *
-   * Guidance / trade-offs to think through:
-   *   - Preserve the file's header comment? (activeSet.ts writes it on every
-   *     write, so you just need to call writeActivePaths — it'll re-emit.)
-   *   - Preserve order? Recommended: keep existing order, append new entries
-   *     to the end. That way the sidecar stays stable across toggles and
-   *     matches the user's mental model of "things I added in this order."
-   *   - What if the path is already in the list (toggle on, no-op) or not
-   *     in the list (toggle off, no-op)? Be idempotent — don't error.
-   *   - Should this surface errors (e.g. sidecar is read-only)? Use
-   *     vscode.window.showErrorMessage so the user knows the toggle didn't
-   *     stick, rather than silently failing.
+   * Add or remove the piece in the sidecar. Existing order is kept and new
+   * entries go to the end; toggling to the current state is a no-op.
    */
   async togglePiece(node: PieceNode, checked: boolean): Promise<void> {
-    // TODO: implement the toggle handler here.
-    //
-    // Skeleton:
-    //   1. const current = await readActivePaths(this.activeSetAbsolutePath);
-    //   2. const next = apply your add-or-remove logic with `checked` and
-    //      `node.piece.file_path`
-    //   3. await writeActivePaths(this.activeSetAbsolutePath, next)
-    //   4. await this.refresh()
-    //
-    // Wrap steps 1–3 in try/catch and call
-    // vscode.window.showErrorMessage(...) on failure.
-    throw new Error("togglePiece not implemented");
+    const target = node.piece.file_path;
+    const current = await readActivePaths(this.activeSetAbsolutePath);
+    const has = current.includes(target);
+    if (checked && !has) {
+      await writeActivePaths(this.activeSetAbsolutePath, [...current, target]);
+    } else if (!checked && has) {
+      await writeActivePaths(
+        this.activeSetAbsolutePath,
+        current.filter((p) => p !== target)
+      );
+    }
+    await this.refresh();
   }
 }

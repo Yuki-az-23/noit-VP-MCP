@@ -1,7 +1,11 @@
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { readActivePaths } from "./activeSet";
 
-export async function injectActive(activeSetAbsolutePath: string): Promise<void> {
+export async function injectActive(
+  workspaceRoot: string,
+  activeSetAbsolutePath: string
+): Promise<void> {
   const paths = await readActivePaths(activeSetAbsolutePath);
 
   if (paths.length === 0) {
@@ -14,7 +18,7 @@ export async function injectActive(activeSetAbsolutePath: string): Promise<void>
   const missing: string[] = [];
   for (const p of paths) {
     try {
-      await vscode.workspace.fs.stat(vscode.Uri.file(p));
+      await vscode.workspace.fs.stat(vscode.Uri.file(path.resolve(workspaceRoot, p)));
     } catch {
       missing.push(p);
     }

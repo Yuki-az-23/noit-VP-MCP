@@ -2,23 +2,30 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export interface DiagramPiece {
+  file: string;
   slug: string;
   title: string;
   function_path: string;
   group: string;
   file_path: string;
+  exists: boolean;
 }
 
 export class NoitMcpClient {
   private client: Client | null = null;
   private connecting: Promise<void> | null = null;
 
-  constructor(private readonly command: string) {}
+  constructor(
+    private readonly command: string,
+    private readonly cwd: string
+  ) {}
 
   async listPieces(): Promise<DiagramPiece[]> {
-    const result = await this.call("list_diagram_pieces", {});
-    const content = (result as any).content ?? [];
-    const text = content.find((c: any) => c.type === "text")?.text ?? "[]";
+    const result = (await this.call("list_diagram_pieces", {})) as any;
+    const text = (result.content ?? []).find((c: any) => c.type === "text")?.text ?? "[]";
+    if (result.isError) {
+      throw new Error(text);
+    }
     return JSON.parse(text) as DiagramPiece[];
   }
 
@@ -42,6 +49,7 @@ export class NoitMcpClient {
     const transport = new StdioClientTransport({
       command: this.command,
       args: [],
+      cwd: this.cwd,
     });
     const client = new Client(
       { name: "noit-diagrams-vscode", version: "0.1.0" },

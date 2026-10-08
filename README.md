@@ -5,7 +5,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/noit-documenting-data-flow)](https://pypi.org/project/noit-documenting-data-flow/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 ## What It Does
 
@@ -65,10 +65,12 @@ noit-diagram-rollup init
 
 # Add your first diagram piece
 cp docs/architecture/diagrams/00-template.md docs/architecture/diagrams/01-my-api.md
-# Edit 01-my-api.md with your function's data flow
+# Edit 01-my-api.md with your function's data flow, then register it:
+# add the file to .pages and to rollup.manifest.yml (file + group)
 
-# Generate the viewer
-noit-diagram-rollup build --write
+# Preview (dry-run to a temp dir), then write the live viewer
+noit-diagram-rollup build
+noit-diagram-rollup build --write --out-html docs/architecture_diagrams.html
 
 # Serve docs
 mkdocs serve
@@ -121,8 +123,6 @@ your-project/
 │   │   └── mermaid-interactive.js        # Makes ALL mermaid fences interactive
 │   └── stylesheets/
 │       └── mermaid-interactive.css       # Dark theme for interactive diagrams
-├── scripts/
-│   └── build_diagram_rollup.py           # Generator (also via CLI)
 ├── vscode-extension/                     # Optional: sidebar tree for active pieces
 └── .claude/
     ├── diagrams-active.md                # Active set (managed by extension, hand-editable)
@@ -258,8 +258,8 @@ groups:
 ## Contributing
 
 ```bash
-git clone https://github.com/noit/noit-documenting-data-flow
-cd noit-documenting-data-flow
+git clone https://github.com/Yuki-az-23/noit-VP-MCP
+cd noit-VP-MCP
 pip install -e ".[dev]"
 pytest tests/
 ```
