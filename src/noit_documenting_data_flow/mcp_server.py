@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -22,6 +23,7 @@ from mcp.types import (
     Tool,
 )
 
+from .config import load_config
 from .generator import build_viewer, parse_piece
 from .templates import VIEWER_TEMPLATE
 
@@ -29,8 +31,8 @@ SERVER = Server("noit-documenting-data-flow")
 
 
 def _get_diagrams_dir() -> Path:
-    """Get the diagrams directory from cwd."""
-    return Path.cwd() / "docs" / "architecture" / "diagrams"
+    """Get the diagrams directory from noit.yml (or the default) under cwd."""
+    return Path.cwd() / load_config(Path.cwd())["diagrams_dir"]
 
 
 def _get_manifest_path(diagrams_dir: Path) -> Path:
@@ -334,10 +336,10 @@ async def list_tools() -> list[Tool]:
 
 @SERVER.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
-    diagrams_dir = _get_diagrams_dir()
-    diagrams_dir.mkdir(parents=True, exist_ok=True)
-
     try:
+        diagrams_dir = _get_diagrams_dir()
+        diagrams_dir.mkdir(parents=True, exist_ok=True)
+
         if name == "create_diagram_piece":
             return await _create_piece(diagrams_dir, arguments)
 
@@ -505,9 +507,11 @@ async def _build_viewer(diagrams_dir: Path, write: bool) -> CallToolResult:
         )
 
     if write:
-        out_html = Path.cwd() / "docs" / "architecture_diagrams.generated.html"
-        out_overview = diagrams_dir / "OVERVIEW.generated.md"
+        config = load_config(Path.cwd())
+        out_html = Path.cwd() / config["out_html"]
+        out_overview = Path.cwd() / config["out_overview"]
         out_html.parent.mkdir(parents=True, exist_ok=True)
+        out_overview.parent.mkdir(parents=True, exist_ok=True)
         out_html.write_text(html_out, encoding="utf-8")
         out_overview.write_text(overview, encoding="utf-8")
         return CallToolResult(
@@ -540,6 +544,42 @@ async def _build_viewer(diagrams_dir: Path, write: bool) -> CallToolResult:
         )
 
 
+TOKEN_ENV = "NOIT_MCP_TOKEN"
+
+
+def create_http_app(token: str) -> Any:
+    """Streamable HTTP app at /mcp that rejects requests without the bearer token."""
+    import contextlib
+    import hmac
+
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from starlette.applications import Starlette
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    manager = StreamableHTTPSessionManager(app=SERVER)
+    expected = f"Bearer {token}".encode()
+
+    class AuthorizedMcp:
+        async def __call__(self, scope, receive, send):
+            headers = dict(scope.get("headers") or [])
+            if not hmac.compare_digest(headers.get(b"authorization", b""), expected):
+                response = JSONResponse({"error": "unauthorized"}, status_code=401)
+                await response(scope, receive, send)
+                return
+            await manager.handle_request(scope, receive, send)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app):
+        async with manager.run():
+            yield
+
+    return Starlette(
+        routes=[Route("/mcp", endpoint=AuthorizedMcp(), methods=["GET", "POST", "DELETE"])],
+        lifespan=lifespan,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="NOit Documenting Data Flow MCP Server")
     parser.add_argument("--transport", choices=["stdio", "http"], default="stdio")
@@ -558,27 +598,17 @@ def main() -> int:
 
         asyncio.run(run_stdio())
     else:
+        token = os.environ.get(TOKEN_ENV)
+        if not token:
+            print(
+                f"HTTP transport requires a bearer token: set {TOKEN_ENV} and send "
+                f"'Authorization: Bearer <token>' from the client.",
+                file=sys.stderr,
+            )
+            return 2
         import uvicorn
-        from mcp.server.sse import SseServerTransport
-        from starlette.applications import Starlette
-        from starlette.routing import Mount, Route
 
-        sse = SseServerTransport("/messages/")
-
-        async def handle_sse(request):
-            async with sse.connect_sse(request.scope, request.receive, request._send) as (
-                read,
-                write,
-            ):
-                await SERVER.run(read, write, SERVER.create_initialization_options())
-
-        app = Starlette(
-            routes=[
-                Route("/sse", handle_sse),
-                Mount("/messages/", app=sse.handle_post_message),
-            ]
-        )
-        uvicorn.run(app, host=args.host, port=args.port)
+        uvicorn.run(create_http_app(token), host=args.host, port=args.port)
 
     return 0
 

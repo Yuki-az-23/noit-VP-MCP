@@ -46,6 +46,8 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",
+    "mypy>=1.10",
+    "types-PyYAML",
     "mkdocs-material>=9.5",
     "mkdocs-awesome-pages-plugin>=2.9",
 ]
