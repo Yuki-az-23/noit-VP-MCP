@@ -7,30 +7,27 @@ Commands:
   build     Build viewer + overview (dry-run by default)
   validate  Validate all pieces have valid mermaid + required fields
 """
+
 from __future__ import annotations
 
 import argparse
-import html
-import re
-import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 import yaml
 
-from .generator import build_viewer, parse_piece, derive_id
+from .generator import build_viewer, parse_piece
 from .templates import (
     DIAGRAM_TEMPLATE,
     MANIFEST_TEMPLATE,
-    PAGES_TEMPLATE,
+    MERMAID_INTERACTIVE_CSS,
+    MERMAID_INTERACTIVE_JS,
     MERMAID_STYLE,
     MKDOCS_SNIPPET,
+    PAGES_TEMPLATE,
     VIEWER_TEMPLATE,
-    MERMAID_INTERACTIVE_JS,
-    MERMAID_INTERACTIVE_CSS,
 )
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = SCRIPT_DIR / "templates"
@@ -131,7 +128,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     if dry:
         live_html = cwd / "docs" / "architecture_diagrams.html"
         if live_html.exists():
-            print(f"\n[DIFF] Diff vs live viewer:")
+            print("\n[DIFF] Diff vs live viewer:")
             print(f"   git --no-pager diff --no-index {live_html} {out_html}")
         print("\n[TIP] Review, then re-run with --write to emit to real paths.")
     return 0
@@ -164,9 +161,13 @@ def cmd_validate(args: argparse.Namespace) -> int:
             if not piece["title"] or piece["title"] == path.stem:
                 warnings.append(f"  {i}. {entry['file']}: Title defaults to filename")
             if not piece["desc"]:
-                warnings.append(f"  {i}. {entry['file']}: No description (first paragraph after H1)")
+                warnings.append(
+                    f"  {i}. {entry['file']}: No description (first paragraph after H1)"
+                )
             if "FUNCTION_NAME" in piece["mermaid"]:
-                warnings.append(f"  {i}. {entry['file']}: Contains template placeholder FUNCTION_NAME")
+                warnings.append(
+                    f"  {i}. {entry['file']}: Contains template placeholder FUNCTION_NAME"
+                )
             print(f"  [OK] {i}. {entry['file']}: {piece['title']}")
         except ValueError as e:
             errors.append(f"  {i}. {entry['file']}: {e}")
@@ -180,8 +181,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     if errors:
         print("\n[ERRORS]:")
-        for e in errors:
-            print(e)
+        for err in errors:
+            print(err)
         return 1
 
     print(f"\n[OK] All {len(manifest['diagrams'])} pieces valid!")
@@ -205,22 +206,36 @@ def main() -> int:
 
     # build
     p_build = sub.add_parser("build", help="Build viewer + overview")
-    p_build.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
-    p_build.add_argument("--manifest", help="Manifest file (default: <diagrams-dir>/rollup.manifest.yml)")
+    p_build.add_argument(
+        "--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder"
+    )
+    p_build.add_argument(
+        "--manifest", help="Manifest file (default: <diagrams-dir>/rollup.manifest.yml)"
+    )
     p_build.add_argument("--template", help="Viewer template HTML")
-    p_build.add_argument("--out-html", default="docs/architecture_diagrams.generated.html", help="Output HTML path")
-    p_build.add_argument("--out-overview", default="docs/architecture/diagrams/OVERVIEW.generated.md", help="Output overview path")
-    p_build.add_argument("--write", action="store_true", help="Write to real paths (default: dry-run)")
+    p_build.add_argument(
+        "--out-html", default="docs/architecture_diagrams.generated.html", help="Output HTML path"
+    )
+    p_build.add_argument(
+        "--out-overview",
+        default="docs/architecture/diagrams/OVERVIEW.generated.md",
+        help="Output overview path",
+    )
+    p_build.add_argument(
+        "--write", action="store_true", help="Write to real paths (default: dry-run)"
+    )
     p_build.set_defaults(func=cmd_build)
 
     # validate
     p_val = sub.add_parser("validate", help="Validate all diagram pieces")
-    p_val.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
+    p_val.add_argument(
+        "--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder"
+    )
     p_val.add_argument("--manifest", help="Manifest file")
     p_val.set_defaults(func=cmd_validate)
 
     args = parser.parse_args()
-    return args.func(args)
+    return int(args.func(args))
 
 
 # Skill template for .claude/skills/
