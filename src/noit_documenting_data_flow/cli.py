@@ -7,30 +7,29 @@ Commands:
   build     Build viewer + overview (dry-run by default)
   validate  Validate all pieces have valid mermaid + required fields
 """
+
 from __future__ import annotations
 
 import argparse
-import html
-import re
-import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 import yaml
 
-from .generator import build_viewer, parse_piece, derive_id
+from . import __version__
+from .config import load_config
+from .generator import build_viewer, parse_piece
 from .templates import (
     DIAGRAM_TEMPLATE,
     MANIFEST_TEMPLATE,
-    PAGES_TEMPLATE,
+    MERMAID_INTERACTIVE_CSS,
+    MERMAID_INTERACTIVE_JS,
     MERMAID_STYLE,
     MKDOCS_SNIPPET,
+    PAGES_TEMPLATE,
     VIEWER_TEMPLATE,
-    MERMAID_INTERACTIVE_JS,
-    MERMAID_INTERACTIVE_CSS,
 )
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = SCRIPT_DIR / "templates"
@@ -39,7 +38,7 @@ TEMPLATES_DIR = SCRIPT_DIR / "templates"
 def cmd_init(args: argparse.Namespace) -> int:
     """Initialize diagram structure in current project."""
     cwd = Path.cwd()
-    diagrams_dir = cwd / "docs" / "architecture" / "diagrams"
+    diagrams_dir = cwd / load_config(cwd)["diagrams_dir"]
     diagrams_dir.mkdir(parents=True, exist_ok=True)
 
     # Create directories
@@ -82,7 +81,10 @@ def cmd_init(args: argparse.Namespace) -> int:
 def cmd_build(args: argparse.Namespace) -> int:
     """Build the viewer and overview."""
     cwd = Path.cwd()
-    diagrams_dir = cwd / args.diagrams_dir
+    config = load_config(cwd)
+    diagrams_dir = cwd / (args.diagrams_dir or config["diagrams_dir"])
+    out_html_arg = args.out_html or config["out_html"]
+    out_overview_arg = args.out_overview or config["out_overview"]
     manifest_path = Path(args.manifest) if args.manifest else diagrams_dir / "rollup.manifest.yml"
     template_path = Path(args.template) if args.template else TEMPLATES_DIR / "viewer_template.html"
 
@@ -112,11 +114,11 @@ def cmd_build(args: argparse.Namespace) -> int:
     dry = not args.write
     if dry:
         scratch = Path(tempfile.mkdtemp(prefix="noit_diagram_rollup_"))
-        out_html = scratch / Path(args.out_html).name
-        out_overview = scratch / Path(args.out_overview).name
+        out_html = scratch / Path(out_html_arg).name
+        out_overview = scratch / Path(out_overview_arg).name
     else:
-        out_html = cwd / args.out_html
-        out_overview = cwd / args.out_overview
+        out_html = cwd / out_html_arg
+        out_overview = cwd / out_overview_arg
         out_html.parent.mkdir(parents=True, exist_ok=True)
         out_overview.parent.mkdir(parents=True, exist_ok=True)
 
@@ -131,7 +133,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     if dry:
         live_html = cwd / "docs" / "architecture_diagrams.html"
         if live_html.exists():
-            print(f"\n[DIFF] Diff vs live viewer:")
+            print("\n[DIFF] Diff vs live viewer:")
             print(f"   git --no-pager diff --no-index {live_html} {out_html}")
         print("\n[TIP] Review, then re-run with --write to emit to real paths.")
     return 0
@@ -140,7 +142,7 @@ def cmd_build(args: argparse.Namespace) -> int:
 def cmd_validate(args: argparse.Namespace) -> int:
     """Validate all diagram pieces."""
     cwd = Path.cwd()
-    diagrams_dir = cwd / args.diagrams_dir
+    diagrams_dir = cwd / (args.diagrams_dir or load_config(cwd)["diagrams_dir"])
     manifest_path = Path(args.manifest) if args.manifest else diagrams_dir / "rollup.manifest.yml"
 
     if not manifest_path.exists():
@@ -164,9 +166,13 @@ def cmd_validate(args: argparse.Namespace) -> int:
             if not piece["title"] or piece["title"] == path.stem:
                 warnings.append(f"  {i}. {entry['file']}: Title defaults to filename")
             if not piece["desc"]:
-                warnings.append(f"  {i}. {entry['file']}: No description (first paragraph after H1)")
+                warnings.append(
+                    f"  {i}. {entry['file']}: No description (first paragraph after H1)"
+                )
             if "FUNCTION_NAME" in piece["mermaid"]:
-                warnings.append(f"  {i}. {entry['file']}: Contains template placeholder FUNCTION_NAME")
+                warnings.append(
+                    f"  {i}. {entry['file']}: Contains template placeholder FUNCTION_NAME"
+                )
             print(f"  [OK] {i}. {entry['file']}: {piece['title']}")
         except ValueError as e:
             errors.append(f"  {i}. {entry['file']}: {e}")
@@ -180,8 +186,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     if errors:
         print("\n[ERRORS]:")
-        for e in errors:
-            print(e)
+        for err in errors:
+            print(err)
         return 1
 
     print(f"\n[OK] All {len(manifest['diagrams'])} pieces valid!")
@@ -194,7 +200,7 @@ def main() -> int:
         description="NOit Documenting Data Flow - STAR diagrams -> interactive viewer",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -205,22 +211,42 @@ def main() -> int:
 
     # build
     p_build = sub.add_parser("build", help="Build viewer + overview")
-    p_build.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
-    p_build.add_argument("--manifest", help="Manifest file (default: <diagrams-dir>/rollup.manifest.yml)")
+    p_build.add_argument(
+        "--diagrams-dir",
+        help="Diagrams folder (default: from noit.yml, else docs/architecture/diagrams)",
+    )
+    p_build.add_argument(
+        "--manifest", help="Manifest file (default: <diagrams-dir>/rollup.manifest.yml)"
+    )
     p_build.add_argument("--template", help="Viewer template HTML")
-    p_build.add_argument("--out-html", default="docs/architecture_diagrams.generated.html", help="Output HTML path")
-    p_build.add_argument("--out-overview", default="docs/architecture/diagrams/OVERVIEW.generated.md", help="Output overview path")
-    p_build.add_argument("--write", action="store_true", help="Write to real paths (default: dry-run)")
+    p_build.add_argument(
+        "--out-html",
+        help="Output HTML path (default: from noit.yml, else docs/architecture_diagrams.generated.html)",
+    )
+    p_build.add_argument(
+        "--out-overview",
+        help="Output overview path (default: from noit.yml, else <diagrams-dir>/OVERVIEW.generated.md)",
+    )
+    p_build.add_argument(
+        "--write", action="store_true", help="Write to real paths (default: dry-run)"
+    )
     p_build.set_defaults(func=cmd_build)
 
     # validate
     p_val = sub.add_parser("validate", help="Validate all diagram pieces")
-    p_val.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
+    p_val.add_argument(
+        "--diagrams-dir",
+        help="Diagrams folder (default: from noit.yml, else docs/architecture/diagrams)",
+    )
     p_val.add_argument("--manifest", help="Manifest file")
     p_val.set_defaults(func=cmd_validate)
 
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        return int(args.func(args))
+    except ValueError as e:
+        print(f"[ERROR] {e}")
+        return 1
 
 
 # Skill template for .claude/skills/

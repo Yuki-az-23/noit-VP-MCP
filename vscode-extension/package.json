@@ -13,6 +13,7 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
+    "vscode:prepublish": "npm run build",
     "build": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.2",
     "typescript": "^5.3.0"
   },
   "contributes": {
@@ -71,5 +73,11 @@
         }
       }
     }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yuki-az-23/noit-VP-MCP",
+    "directory": "vscode-extension"
   }
 }
