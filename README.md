@@ -85,9 +85,13 @@ Run the MCP server to let AI agents manage your diagrams:
 # Stdio transport (for Claude Code, etc.)
 noit-mcp-server
 
-# Or HTTP transport
+# Or HTTP transport (streamable HTTP at /mcp; requires a bearer token)
+export NOIT_MCP_TOKEN="$(openssl rand -hex 32)"
 noit-mcp-server --transport http --port 8765
 ```
+
+HTTP clients must send `Authorization: Bearer $NOIT_MCP_TOKEN`; without the variable set the
+server refuses to start.
 
 **Available Tools:**
 | Tool | Description |
@@ -130,6 +134,18 @@ your-project/
         └── documenting-data-flow/
             └── SKILL.md                  # Skill definition for agents
 ```
+
+## Configuration (`noit.yml`)
+
+Optional, at the project root. Every key is optional and defaults to the paths shown:
+
+```yaml
+diagrams_dir: docs/architecture/diagrams
+out_html: docs/architecture_diagrams.generated.html
+out_overview: docs/architecture/diagrams/OVERVIEW.generated.md
+```
+
+The CLI and the MCP server (and so the VS Code extension) all read it; CLI flags still win.
 
 ## STAR Diagram Template
 
@@ -261,8 +277,10 @@ groups:
 git clone https://github.com/Yuki-az-23/noit-VP-MCP
 cd noit-VP-MCP
 pip install -e ".[dev]"
-pytest tests/
+ruff check . && ruff format --check . && mypy src && pytest
 ```
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/SECURITY.md](docs/SECURITY.md).
 
 ## License
 
