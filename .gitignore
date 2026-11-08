@@ -35,3 +35,7 @@ docs/architecture/diagrams/OVERVIEW.generated.md
 # Local config
 noit-diagram-rollup.local.yaml
 mkdocs.local.yml
+# VS Code extension
+node_modules/
+vscode-extension/out/
+*.vsix

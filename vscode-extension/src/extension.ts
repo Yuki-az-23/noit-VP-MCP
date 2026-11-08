@@ -16,7 +16,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const activeSetRelative = config.get<string>("activeSetPath", ".claude/diagrams-active.md");
   const activeSetAbsolute = path.join(root, activeSetRelative);
 
-  const mcp = new NoitMcpClient(mcpCommand);
+  const mcp = new NoitMcpClient(mcpCommand, root);
   context.subscriptions.push({ dispose: () => void mcp.dispose() });
 
   const tree = new DiagramTreeProvider(mcp, root, activeSetAbsolute);
@@ -39,7 +39,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("noit.injectActive", () => injectActive(activeSetAbsolute))
+    vscode.commands.registerCommand("noit.injectActive", () => injectActive(root, activeSetAbsolute))
   );
   context.subscriptions.push(
     vscode.commands.registerCommand("noit.refreshTree", () => tree.refresh())
