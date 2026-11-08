@@ -38,8 +38,7 @@ jobs:
   pypi:
     needs: build
     runs-on: ubuntu-latest
-    # Trusted publishing: configure this repo + workflow + environment on PyPI once.
-    environment: pypi
+    # Trusted publishing: configure this repo + workflow on PyPI once.
     permissions:
       id-token: write
     steps:
