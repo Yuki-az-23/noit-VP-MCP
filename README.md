@@ -5,7 +5,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/noit-documenting-data-flow)](https://pypi.org/project/noit-documenting-data-flow/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 ## What It Does
 
@@ -65,10 +65,12 @@ noit-diagram-rollup init
 
 # Add your first diagram piece
 cp docs/architecture/diagrams/00-template.md docs/architecture/diagrams/01-my-api.md
-# Edit 01-my-api.md with your function's data flow
+# Edit 01-my-api.md with your function's data flow, then register it:
+# add the file to .pages and to rollup.manifest.yml (file + group)
 
-# Generate the viewer
-noit-diagram-rollup build --write
+# Preview (dry-run to a temp dir), then write the live viewer
+noit-diagram-rollup build
+noit-diagram-rollup build --write --out-html docs/architecture_diagrams.html
 
 # Serve docs
 mkdocs serve
@@ -83,9 +85,13 @@ Run the MCP server to let AI agents manage your diagrams:
 # Stdio transport (for Claude Code, etc.)
 noit-mcp-server
 
-# Or HTTP transport
+# Or HTTP transport (streamable HTTP at /mcp; requires a bearer token)
+export NOIT_MCP_TOKEN="$(openssl rand -hex 32)"
 noit-mcp-server --transport http --port 8765
 ```
+
+HTTP clients must send `Authorization: Bearer $NOIT_MCP_TOKEN`; without the variable set the
+server refuses to start.
 
 **Available Tools:**
 | Tool | Description |
@@ -164,8 +170,6 @@ your-project/
 │   │   └── mermaid-interactive.js        # Makes ALL mermaid fences interactive
 │   └── stylesheets/
 │       └── mermaid-interactive.css       # Dark theme for interactive diagrams
-├── scripts/
-│   └── build_diagram_rollup.py           # Generator (also via CLI)
 ├── vscode-extension/                     # Optional: sidebar tree for active pieces
 └── .claude/
     ├── diagrams-active.md                # Active set (managed by extension, hand-editable)
@@ -173,6 +177,18 @@ your-project/
         └── documenting-data-flow/
             └── SKILL.md                  # Skill definition for agents
 ```
+
+## Configuration (`noit.yml`)
+
+Optional, at the project root. Every key is optional and defaults to the paths shown:
+
+```yaml
+diagrams_dir: docs/architecture/diagrams
+out_html: docs/architecture_diagrams.generated.html
+out_overview: docs/architecture/diagrams/OVERVIEW.generated.md
+```
+
+The CLI and the MCP server (and so the VS Code extension) all read it; CLI flags still win.
 
 ## STAR Diagram Template
 
@@ -302,11 +318,13 @@ groups:
 ## Contributing
 
 ```bash
-git clone https://github.com/noit/noit-documenting-data-flow
-cd noit-documenting-data-flow
+git clone https://github.com/Yuki-az-23/noit-VP-MCP
+cd noit-VP-MCP
 pip install -e ".[dev]"
-pytest tests/
+ruff check . && ruff format --check . && mypy src && pytest
 ```
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/SECURITY.md](docs/SECURITY.md).
 
 ## License
 

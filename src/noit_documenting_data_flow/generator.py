@@ -2,14 +2,13 @@
 """
 Diagram generator - core logic for building viewer + overview from STAR pieces.
 """
+
 from __future__ import annotations
 
 import html
 import re
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 MERMAID_RE = re.compile(r"```mermaid\s*\n(.*?)\n```", re.DOTALL)
 
@@ -51,7 +50,9 @@ def parse_piece(path: Path) -> dict[str, str]:
 
 
 def render_nav(groups: list[dict[str, Any]]) -> str:
-    buttons = ['    <button class="active" data-group="all" onclick="showSection(\'all\')">All Diagrams</button>']
+    buttons = [
+        '    <button class="active" data-group="all" onclick="showSection(\'all\')">All Diagrams</button>'
+    ]
     for g in groups:
         label = html.escape(g["label"])
         buttons.append(
@@ -89,11 +90,7 @@ def render_section(did: str, group_id: str, badge: str, index: int, piece: dict[
     </div>"""
 
 
-def build_viewer(
-    manifest: dict[str, Any],
-    diagrams_dir: Path,
-    template: str
-) -> tuple[str, str]:
+def build_viewer(manifest: dict[str, Any], diagrams_dir: Path, template: str) -> tuple[str, str]:
     """Build the interactive HTML viewer and overview Markdown from manifest + pieces."""
     groups = manifest["groups"]
     badge_by_group = {g["id"]: g.get("badge", "ops") for g in groups}
