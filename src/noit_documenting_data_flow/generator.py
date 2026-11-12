@@ -10,7 +10,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 MERMAID_RE = re.compile(r"```mermaid\s*\n(.*?)\n```", re.DOTALL)
+FRONT_MATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def derive_id(stem: str) -> str:
@@ -19,9 +22,22 @@ def derive_id(stem: str) -> str:
     return slug if slug[:1].isalpha() else "d" + slug
 
 
-def parse_piece(path: Path) -> dict[str, str]:
-    """Extract {title, desc, mermaid} from a diagram piece Markdown file."""
+def _parse_front_matter(text: str) -> dict[str, Any]:
+    """Extract YAML front matter from a piece, if present."""
+    m = FRONT_MATTER_RE.match(text)
+    if not m:
+        return {}
+    try:
+        data = yaml.safe_load(m.group(1)) or {}
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def parse_piece(path: Path) -> dict[str, Any]:
+    """Extract {title, desc, mermaid, source_path, issues, milestone, project} from a diagram piece."""
     text = path.read_text(encoding="utf-8")
+    front = _parse_front_matter(text)
 
     # Find H1 title
     title = path.stem
@@ -46,7 +62,21 @@ def parse_piece(path: Path) -> dict[str, str]:
     if not m:
         raise ValueError(f"No ```mermaid block found in {path.name}")
 
-    return {"title": title, "desc": desc, "mermaid": m.group(1).strip()}
+    mermaid = m.group(1).strip()
+    source_path = front.get("source") or front.get("source_path") or ""
+    issues = front.get("issues") or []
+    milestone = front.get("milestone") or ""
+    project = front.get("project") or ""
+
+    return {
+        "title": title,
+        "desc": desc,
+        "mermaid": mermaid,
+        "source_path": source_path,
+        "issues": issues,
+        "milestone": milestone,
+        "project": project,
+    }
 
 
 def render_nav(groups: list[dict[str, Any]]) -> str:
@@ -67,24 +97,36 @@ def render_section(did: str, group_id: str, badge: str, index: int, piece: dict[
     badge_label = html.escape(badge.capitalize())
     # HTML-escape the Mermaid so <br/> / <--> survive as text
     mermaid = html.escape(piece["mermaid"], quote=False)
-    return f"""    <div class="diagram-section" data-group="{group_id}" id="sec-{did}">
-        <div class="section-header">
+
+    issue_bits = []
+    for issue in piece.get("issues") or []:
+        issue_bits.append(f'<span class="issue-badge">#{issue}</span>')
+    issue_html = "\n".join(issue_bits)
+    milestone = piece.get("milestone") or ""
+    milestone_html = f'<span class="milestone-badge">{html.escape(str(milestone))}</span>' if milestone else ""
+    meta_html = "" if not (issue_html or milestone_html) else (
+        f'<div class="section-meta">{issue_html}{milestone_html}</div>'
+    )
+
+    return f"""    <div class=\"diagram-section\" data-group=\"{group_id}\" id=\"sec-{did}\">
+        <div class=\"section-header\">
             <h2>{title}</h2>
-            <span class="badge badge-{badge}">{badge_label}</span>
+            <span class=\"badge badge-{badge}\">{badge_label}</span>
         </div>
-        <div class="section-desc">{desc}</div>
-        <div class="diagram-viewport" id="viewport-{did}">
-            <div class="zoom-help" id="help-{did}">Scroll to zoom &bull; Drag to pan &bull; Double-click to reset</div>
-            <div class="zoom-badge" id="badge-{did}">100%</div>
-            <div class="zoom-controls">
-                <button onclick="zoomIn('{did}')" title="Zoom in">+</button>
-                <button onclick="zoomOut('{did}')" title="Zoom out">&minus;</button>
-                <button onclick="zoomReset('{did}')" title="Reset view" style="font-size:0.8rem">&#8635;</button>
-                <button onclick="zoomFit('{did}')" title="Fit to screen" style="font-size:0.75rem">&#8865;</button>
-                <button onclick="toggleFullscreen('viewport-{did}')" title="Fullscreen" style="font-size:0.85rem">&#10530;</button>
+        <div class=\"section-desc\">{desc}</div>
+        {meta_html}
+        <div class=\"diagram-viewport\" id=\"viewport-{did}\">
+            <div class=\"zoom-help\" id=\"help-{did}\">Scroll to zoom &bull; Drag to pan &bull; Double-click to reset</div>
+            <div class=\"zoom-badge\" id=\"badge-{did}\">100%</div>
+            <div class=\"zoom-controls\">
+                <button onclick=\"zoomIn('{did}')\" title=\"Zoom in\">+</button>
+                <button onclick=\"zoomOut('{did}')\" title=\"Zoom out\">&minus;</button>
+                <button onclick=\"zoomReset('{did}')\" title=\"Reset view\" style=\"font-size:0.8rem\">&#8635;</button>
+                <button onclick=\"zoomFit('{did}')\" title=\"Fit to screen\" style=\"font-size:0.75rem\">&#8865;</button>
+                <button onclick=\"toggleFullscreen('viewport-{did}')\" title=\"Fullscreen\" style=\"font-size:0.85rem\">&#10530;</button>
             </div>
-            <div class="mermaid-src" id="src-{did}">
-{mermaid}
+            <div class=\"mermaid-src\" id=\"src-{did}\">
+ {mermaid}
             </div>
         </div>
     </div>"""

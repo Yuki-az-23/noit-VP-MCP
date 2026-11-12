@@ -208,7 +208,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
         return 1
 
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    report = audit_diagrams(manifest, diagrams_dir, cwd)
+    report = audit_diagrams(manifest, diagrams_dir, cwd, base_ref=args.base)
 
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))
@@ -286,6 +286,7 @@ def main() -> int:
     p_audit.add_argument("--diagrams-dir", default="docs/architecture/diagrams", help="Diagrams folder")
     p_audit.add_argument("--manifest", help="Manifest file")
     p_audit.add_argument("--json", action="store_true", help="Emit machine-readable JSON report")
+    p_audit.add_argument("--base", help="Base git ref to compare against for PR drift checks")
     p_audit.add_argument("--fail-under", type=int, default=0,
                          help="Exit 1 if score is below this value (CI gate; 0 = report-only)")
     p_audit.set_defaults(func=cmd_audit)
