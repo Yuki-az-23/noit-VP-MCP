@@ -1,0 +1,15 @@
+extra_javascript:
+  - javascripts/mermaid-interactive.js
+extra_css:
+  - stylesheets/mermaid-interactive.css
+
+plugins:
+  - awesome-pages          # enables .pages nav (install: mkdocs-awesome-pages-plugin)
+  - roamlinks              # enables [[wikilinks]] (install: mkdocs-roamlinks-plugin)
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

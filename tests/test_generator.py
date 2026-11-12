@@ -1,6 +1,7 @@
 import pytest
 import yaml
 
+from noit_documenting_data_flow.core import build_mermaid
 from noit_documenting_data_flow.generator import build_viewer, derive_id, parse_piece
 from noit_documenting_data_flow.templates import VIEWER_TEMPLATE
 
@@ -41,3 +42,17 @@ def test_build_viewer_from_the_init_template(diagrams_dir):
     assert "&lt;br/&gt;" in html_out
     assert "| 1 | [TEMPLATE: Your Function Name](00-template.md) |" in overview
     assert 'click d00_template "00-template.md"' in overview
+
+
+def test_build_mermaid_uses_the_shared_core():
+    graph = build_mermaid(
+        'My Function',
+        'src/service_runner.py',
+        [{'id': 'in1', 'label': 'Input', 'description': 'HTTP payload'}],
+        [{'id': 'svc', 'label': 'Auth API', 'type': 'extSvc'}],
+        [{'id': 'out1', 'label': 'Output', 'description': 'Response'}],
+    )
+
+    assert 'hub["⚙️ My Function<br/>src/service_runner.py"]:::hub' in graph
+    assert 'hub -->|"query"| svc' in graph
+    assert 'classDef output' in graph

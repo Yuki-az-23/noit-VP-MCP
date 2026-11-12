@@ -34,7 +34,7 @@ from .templates import (
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-TEMPLATES_DIR = SCRIPT_DIR / "templates"
+TEMPLATES_DIR = SCRIPT_DIR / "_templates"
 
 
 def cmd_init(args: argparse.Namespace) -> int:

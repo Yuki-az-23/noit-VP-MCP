@@ -1,0 +1,35 @@
+/**
+ * NOit Mermaid Interactive Styles - Dark theme for pan/zoom/fullscreen
+ * Loaded via extra_css in mkdocs.yml
+ * Built by NOit (https://noit2.com)
+ */
+.mermaid {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  background: var(--md-default-bg-color, #0f172a);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+.mermaid:active { cursor: grabbing; }
+.mermaid svg { position: absolute !important; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+.mermaid-zoom-controls { position: absolute; bottom: 12px; right: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 50; pointer-events: auto; }
+.mermaid-zoom-controls button { width: 36px; height: 36px; border: 1px solid var(--md-default-fg-color--lightest, #475569); border-radius: 8px; background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(8px); color: var(--md-default-fg-color, #e2e8f0); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; line-height: 1; }
+.mermaid-zoom-controls button:hover { background: var(--md-primary-fg-color--light, #334155); border-color: var(--md-primary-fg-color, #60a5fa); }
+.mermaid-zoom-badge { position: absolute; top: 10px; right: 12px; padding: 4px 10px; background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--md-default-fg-color--lightest, #475569); border-radius: 6px; color: var(--md-default-fg-color--light, #94a3b8); font-size: 0.75rem; z-index: 50; pointer-events: none; font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, 'Fira Code', monospace; }
+.mermaid-zoom-help { position: absolute; top: 10px; left: 12px; padding: 4px 10px; background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--md-default-fg-color--lightest, #475569); border-radius: 6px; color: var(--md-default-fg-color--lighter, #64748b); font-size: 0.7rem; z-index: 50; pointer-events: none; transition: opacity 0.5s; white-space: nowrap; }
+.mermaid:fullscreen, .mermaid:-webkit-full-screen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; border-radius: 0 !important; min-height: 100vh !important; }
+[data-md-color-scheme="slate"] .mermaid { background: #0f172a; }
+[data-md-color-scheme="slate"] .mermaid-zoom-controls button { background: rgba(30, 41, 59, 0.9); border-color: #475569; color: #e2e8f0; }
+[data-md-color-scheme="slate"] .mermaid-zoom-controls button:hover { background: #334155; border-color: #60a5fa; }
+[data-md-color-scheme="slate"] .mermaid-zoom-badge { background: rgba(30, 41, 59, 0.85); border-color: #475569; color: #94a3b8; }
+[data-md-color-scheme="slate"] .mermaid-zoom-help { background: rgba(30, 41, 59, 0.85); border-color: #475569; color: #64748b; }
+[data-md-color-scheme="default"] .mermaid { background: #ffffff; }
+[data-md-color-scheme="default"] .mermaid-zoom-controls button { background: rgba(255, 255, 255, 0.95); border-color: #d1d5db; color: #374151; }
+[data-md-color-scheme="default"] .mermaid-zoom-controls button:hover { background: #f3f4f6; border-color: #3b82f6; }
+[data-md-color-scheme="default"] .mermaid-zoom-badge { background: rgba(255, 255, 255, 0.9); border-color: #d1d5db; color: #6b7280; }
+[data-md-color-scheme="default"] .mermaid-zoom-help { background: rgba(255, 255, 255, 0.9); border-color: #d1d5db; color: #9ca3af; }
+@media (max-width: 768px) { .mermaid { min-height: 300px; } .mermaid-zoom-controls { bottom: 8px; right: 8px; } .mermaid-zoom-controls button { width: 32px; height: 32px; font-size: 1rem; } .mermaid-zoom-badge { top: 8px; right: 8px; padding: 3px 8px; font-size: 0.7rem; } .mermaid-zoom-help { top: 8px; left: 8px; padding: 3px 8px; font-size: 0.65rem; } }
+@media print { .mermaid-zoom-controls, .mermaid-zoom-badge, .mermaid-zoom-help { display: none !important; } .mermaid { position: static !important; height: auto !important; min-height: 0 !important; overflow: visible !important; } .mermaid svg { position: static !important; width: 100% !important; height: auto !important; } }

@@ -1,0 +1,4 @@
+00-template.md
+# Add new diagram files here (one per line) for MkDocs nav order:
+# 01-your-function.md
+# 02-another-flow.md
