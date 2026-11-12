@@ -108,12 +108,14 @@ def test_build_viewer_write_matches_the_cli(project):
     assert not (project / "docs/architecture_diagrams.html").exists()
 
 
-def test_http_app_requires_the_bearer_token():
+def test_http_app_requires_a_valid_bearer_token():
     app = mcp_server.create_http_app("s3cret")
     with TestClient(app) as client:
         assert client.post("/mcp", json={}).status_code == 401
-        bad = client.post("/mcp", json={}, headers={"Authorization": "Bearer nope"})
-        assert bad.status_code == 401
+        assert client.post("/mcp", json={}, headers={"Authorization": "******"}).status_code == 401
+        assert client.post("/mcp", json={}, headers={"Authorization": "******"}).status_code == 401
+
+
 
 
 def test_http_mode_refuses_to_start_without_a_token(monkeypatch):
