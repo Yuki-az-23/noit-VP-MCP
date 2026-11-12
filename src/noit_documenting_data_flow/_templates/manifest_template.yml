@@ -1,0 +1,21 @@
+title: "Project Architecture Diagrams"
+subtitle: "Interactive viewer generated from per-function STAR pieces — by NOit (noit2.com)"
+groups:
+  - id: "infra"
+    label: "Infrastructure"
+    badge: "infra"
+  - id: "ops"
+    label: "Operations"
+    badge: "ops"
+  - id: "seq"
+    label: "Sequences"
+    badge: "seq"
+
+diagrams:
+  - file: "00-template.md"
+    group: "ops"
+  # Add your diagrams here:
+  # - file: "01-your-function.md"
+  #   group: "ops"
+  # - file: "02-another-flow.md"
+  #   group: "seq"
