@@ -25,7 +25,7 @@ from mcp.types import (
 
 from .audit import audit_diagrams
 from .config import load_config
-from .core import build_mermaid, function_path_from_mermaid
+from .core import HUB_PATH_RE, build_mermaid, function_path_from_mermaid
 from .generator import build_viewer, parse_piece
 from .templates import VIEWER_TEMPLATE
 

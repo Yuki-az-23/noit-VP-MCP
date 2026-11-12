@@ -61,12 +61,19 @@
             if (!srcEl || !viewport) continue;
             try {
                 const { svg } = await mermaid.render('mermaid-' + id, srcEl.textContent.trim());
-                viewport.insertAdjacentHTML('afterbegin', svg);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(svg, 'image/svg+xml');
+                const parsedSvg = doc.documentElement;
+                if (parsedSvg.nodeName.toLowerCase() !== 'svg') {
+                    throw new Error('Mermaid returned a non-SVG payload');
+                }
+                parsedSvg.setAttribute('id', 'mermaid-' + id);
+                parsedSvg.removeAttribute('style');
+                parsedSvg.setAttribute('width', '100%');
+                parsedSvg.setAttribute('height', '100%');
+                viewport.appendChild(parsedSvg);
                 const svgEl = viewport.querySelector('svg#mermaid-' + id);
                 if (svgEl) {
-                    svgEl.removeAttribute('style');
-                    svgEl.setAttribute('width', '100%');
-                    svgEl.setAttribute('height', '100%');
                     panZoomInstances[id] = svgPanZoom(svgEl, { zoomEnabled: true, panEnabled: true, controlIconsEnabled: false, dblClickZoomEnabled: false, mouseWheelZoomEnabled: true, preventMouseEventsDefault: true, minZoom: 0.3, maxZoom: 5, fit: true, center: true, beforeZoom: function() { updateZoomBadge(id); }, onZoom: function() { updateZoomBadge(id); } });
                     svgEl.addEventListener('dblclick', function(e) { e.preventDefault(); if (panZoomInstances[id]) { panZoomInstances[id].reset(); setTimeout(() => { panZoomInstances[id].fit(); panZoomInstances[id].center(); updateZoomBadge(id); }, 50); } });
                     updateZoomBadge(id);
