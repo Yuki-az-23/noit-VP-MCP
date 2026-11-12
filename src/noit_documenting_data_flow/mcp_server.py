@@ -570,7 +570,7 @@ TOKEN_ENV = "NOIT_MCP_TOKEN"
 
 
 def create_http_app(token: str) -> Any:
-    """Streamable HTTP app at /mcp that rejects requests without the bearer token."""
+    """Streamable HTTP app at /mcp that rejects requests without a valid bearer token."""
     import contextlib
     import hmac
 
@@ -580,12 +580,29 @@ def create_http_app(token: str) -> Any:
     from starlette.routing import Route
 
     manager = StreamableHTTPSessionManager(app=SERVER)
-    expected = f"Bearer {token}".encode()
 
     class AuthorizedMcp:
         async def __call__(self, scope, receive, send):
             headers = dict(scope.get("headers") or [])
-            if not hmac.compare_digest(headers.get(b"authorization", b""), expected):
+            auth_header = headers.get(b"authorization", b"")
+            if not auth_header:
+                response = JSONResponse({"error": "unauthorized"}, status_code=401)
+                await response(scope, receive, send)
+                return
+
+            try:
+                value = auth_header.decode("latin1").strip()
+            except UnicodeDecodeError:
+                response = JSONResponse({"error": "unauthorized"}, status_code=401)
+                await response(scope, receive, send)
+                return
+
+            scheme, separator, provided_token = value.partition(" ")
+            if separator == "" or scheme.lower() != "bearer":
+                response = JSONResponse({"error": "unauthorized"}, status_code=401)
+                await response(scope, receive, send)
+                return
+            if not hmac.compare_digest(provided_token, token):
                 response = JSONResponse({"error": "unauthorized"}, status_code=401)
                 await response(scope, receive, send)
                 return
