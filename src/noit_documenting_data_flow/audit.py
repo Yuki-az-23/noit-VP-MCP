@@ -23,6 +23,7 @@ DEDUCTIONS = {
     "missing_file": 20,     # manifest lists a piece that is not on disk
     "missing_source": 15,   # hub references a source file that is gone
     "stale": 10,            # source changed after the piece was last touched
+    "stale_pr": 10,         # source changed in a PR while the piece did not
     "unregistered": 10,     # piece on disk but absent from the manifest
     "no_source_ref": 5,     # hub label has no <br/>source/path line
 }
@@ -87,7 +88,15 @@ def last_change_ts(path: Path, repo_root: Path) -> float | None:
     return path.stat().st_mtime if path.exists() else None
 
 
-def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path) -> AuditReport:
+def _piece_source_path(piece: dict, fallback: str | None = None) -> str | None:
+    if piece.get("source_path"):
+        return str(piece["source_path"])
+    if piece.get("mermaid"):
+        return extract_source_path(piece["mermaid"])
+    return fallback
+
+
+def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path, *, base_ref: str | None = None) -> AuditReport:
     """Compare every registered piece against the source file its hub points at."""
     findings: list[Finding] = []
     # 00-template.md is the scaffold users copy — never audited, never counted.
@@ -106,7 +115,7 @@ def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path) -> Audit
         except ValueError as e:
             findings.append(Finding("no_source_ref", entry["file"], str(e)))
             continue
-        src = extract_source_path(piece["mermaid"])
+        src = _piece_source_path(piece)
         if src is None:
             findings.append(
                 Finding("no_source_ref", entry["file"], "hub label has no <br/>source/path line")
@@ -124,6 +133,33 @@ def audit_diagrams(manifest: dict, diagrams_dir: Path, repo_root: Path) -> Audit
             findings.append(
                 Finding("stale", entry["file"], f"{src} changed after this piece was last updated")
             )
+        if base_ref:
+            try:
+                diff_out = subprocess.run(
+                    ["git", "diff", "--name-only", base_ref, "--", src],
+                    cwd=repo_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            except OSError:
+                diff_out = None
+            if diff_out and diff_out.returncode == 0 and diff_out.stdout.strip():
+                piece_base = subprocess.run(
+                    ["git", "diff", "--name-only", base_ref, "--", str(piece_path.relative_to(repo_root))],
+                    cwd=repo_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if piece_base.returncode == 0 and not piece_base.stdout.strip():
+                    findings.append(
+                        Finding(
+                            "stale_pr",
+                            entry["file"],
+                            f"{src} changed in this PR but {entry['file']} was not updated",
+                        )
+                    )
 
     for path in sorted(diagrams_dir.glob("[0-9][0-9]-*.md")):
         if path.name != "00-template.md" and path.name not in registered:

@@ -76,7 +76,8 @@ def test_update_metadata_keeps_the_spokes(diagrams_dir):
     assert not is_error
 
     text = (diagrams_dir / "01-api.md").read_text()
-    assert text.startswith("# Handle API\n")
+    assert text.startswith("---\nsource: src/api/handler.py\n")
+    assert "# Handle API\n" in text
     assert 'hub["⚙️ Handle API<br/>src/api/handler.py"]:::hub' in text
     assert 'hub -->|"query"| auth' in text
     manifest = yaml.safe_load((diagrams_dir / "rollup.manifest.yml").read_text())

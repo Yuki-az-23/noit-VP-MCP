@@ -206,6 +206,10 @@ VIEWER_TEMPLATE = """<!DOCTYPE html>
         .badge-ops { background: #4c1d95; color: #c4b5fd; }
         .badge-seq { background: #7c2d12; color: #fdba74; }
         .section-desc { padding: 0.8rem 1.5rem; color: #b0bec5; font-size: 0.85rem; border-bottom: 1px solid #334155; }
+        .section-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.7rem 1.5rem 0; }
+        .issue-badge, .milestone-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.68rem; font-weight: 700; border: 1px solid #475569; }
+        .issue-badge { background: rgba(59,130,246,0.15); color: #bfdbfe; }
+        .milestone-badge { background: rgba(168,85,247,0.15); color: #e9d5ff; }
         .diagram-viewport { position: relative; width: 100%; height: 85vh; min-height: 500px; background: #0f172a; border-radius: 0 0 12px 12px; overflow: hidden; cursor: grab; }
         .diagram-viewport:active { cursor: grabbing; }
         .diagram-viewport svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }

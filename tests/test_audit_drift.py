@@ -123,3 +123,30 @@ def test_audit_ignores_template_even_when_registered(tmp_path):
     assert report.findings == []
     assert report.total_pieces == 1  # template not counted
     assert report.score == 100
+
+
+def test_audit_flags_pr_drift_when_source_changed_without_piece(tmp_path):
+    repo = tmp_path
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=repo, check=True)
+
+    src = repo / "src" / "handler.py"
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_text("def run():\n    return 1\n", encoding="utf-8")
+
+    diagrams = repo / "docs" / "architecture" / "diagrams"
+    diagrams.mkdir(parents=True)
+    piece = diagrams / "01-handler.md"
+    piece.write_text(
+        "---\nsource: src/handler.py\nissues: [12]\nmilestone: v2.0\n---\n\n# Handler\n\n```mermaid\ngraph LR\n    hub[\"⚙️ handler()<br/>src/handler.py\"]:::hub\n```\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-qm", "base"], cwd=repo, check=True)
+
+    src.write_text("def run():\n    return 2\n", encoding="utf-8")
+    manifest = make_manifest(diagrams, ["01-handler.md"])
+    report = audit_diagrams(manifest, diagrams, repo, base_ref="HEAD")
+    assert any(f.kind == "stale_pr" for f in report.findings)
+    assert report.findings[0].piece == "01-handler.md"
