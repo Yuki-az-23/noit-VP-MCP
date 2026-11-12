@@ -90,8 +90,8 @@ export NOIT_MCP_TOKEN="$(openssl rand -hex 32)"
 noit-mcp-server --transport http --port 8765
 ```
 
-HTTP clients must send `Authorization: Bearer $NOIT_MCP_TOKEN`; without the variable set the
-server refuses to start.
+HTTP clients must send a bearer token in the `Authorization` header; without
+`NOIT_MCP_TOKEN` set, the server refuses to start.
 
 **Available Tools:**
 | Tool | Description |
@@ -292,28 +292,13 @@ Options:
 }
 ```
 
-Groups: `infra` (badge: infra), `ops` (badge: ops), `seq` (badge: seq)
+## Manifest Groups
 
-## Configuration
+Use these conventional group IDs in `rollup.manifest.yml`:
 
-Create `noit-diagram-rollup.yaml` in project root:
-
-```yaml
-diagrams_dir: "docs/architecture/diagrams"
-manifest: "rollup.manifest.yml"
-title: "My Project Architecture Diagrams"
-subtitle: "Generated from STAR pieces"
-groups:
-  - id: "infra"
-    label: "Infrastructure"
-    badge: "infra"
-  - id: "ops"
-    label: "Operations"
-    badge: "ops"
-  - id: "seq"
-    label: "Sequences"
-    badge: "seq"
-```
+- `infra` (badge: `infra`)
+- `ops` (badge: `ops`)
+- `seq` (badge: `seq`)
 
 ## Contributing
 
